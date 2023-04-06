@@ -1,0 +1,5 @@
+/images/train/*.png
+/images/train/
+/result/h5/
+*.h5
+*.mp4
