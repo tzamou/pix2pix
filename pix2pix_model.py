@@ -6,30 +6,29 @@ from tensorflow.keras.layers import Input, Dense, LeakyReLU, Activation, Conv2D,
     BatchNormalization, Embedding, multiply, Dropout, Concatenate, ZeroPadding2D
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.optimizers import Adam
-import os
 import utils
-from utils import DataLoader
+from utils.data import DataLoader
+from utils import setpath as path
 from tensorflow.keras.utils import plot_model
 
 
 class Pix2pix:
-    def __init__(self,
-                 gen_lr=0.0002,
-                 dis_lr=0.0002,
-                 model_name=None
-                 ):
-
+    def __init__(self,model_name=None,config=None):
         if model_name == None:
             self.modelname = self.__class__.__name__
         else:
             self.modelname = model_name
-        self.gen_lr = gen_lr
-        self.dis_lr = dis_lr
+        path.train_folder_process()
+        config.save_to_json(path=f'{path.LOG_CONFIGPATH}/config.json')
+        self.gen_lr = config.gen_lr
+        self.dis_lr = config.dis_lr
+        self.epochs = config.epochs
+        self.batchsize = config.batchsize
+
         self.genModel = self.build_generator()
         self.disModel = self.build_discriminator()
         self.advModel = self.build_adversialmodel()
         self.disc_patch = (int(256 / 2 ** 4), int(256 / 2 ** 4), 1)
-
         self.sketchdata, self.realdata =DataLoader().load_data(metrics='[0,1]')
 
     def encoder_block(self, input_, u, k, s=2, p='same', bn=True, act='leakyrelu'):
@@ -117,20 +116,20 @@ class Pix2pix:
 
         return model
 
-    def train(self, epochs=30000, batch_size=8):
+    def train(self):
         self.dloss = []
         self.gloss = []
 
-        for i in range(epochs):
+        for i in range(self.epochs):
             # self.sketchdata, self.realdata
-            idx = np.random.randint(0, self.sketchdata.shape[0], batch_size)#;print(idx.shape)
+            idx = np.random.randint(0, self.sketchdata.shape[0], self.batchsize)#;print(idx.shape)
             # print(i,idx)
             fake_images = self.genModel(self.sketchdata[idx])#;print(fake_images.shape)
             real_images = self.realdata[idx]#;print(real_images.shape)
             real_sketch = self.sketchdata[idx]
 
-            y_real = np.ones((batch_size, ) + self.disc_patch)
-            y_fake = np.zeros((batch_size, ) + self.disc_patch)
+            y_real = np.ones((self.batchsize, ) + self.disc_patch)
+            y_fake = np.zeros((self.batchsize, ) + self.disc_patch)
             # print(self.disModel([fake_images, real_images]).shape)
             d_loss_real = self.disModel.train_on_batch([real_images, real_sketch], y_real)
             d_loss_fake = self.disModel.train_on_batch([fake_images, real_sketch], y_fake)
@@ -146,7 +145,7 @@ class Pix2pix:
             if (i + 1) % 500 == 0 or i == 0 or (i+1 <= 3000 and (i+1)%40==0):
                 # self.showinput(num_images=16,idx=idx,data=self.sketchdata)
                 # self.showinput(num_images=16,idx=idx,data=self.realdata)
-                num_images = batch_size
+                num_images = self.batchsize
                 # generated_images = 0.5 * generated_images + 0.5
                 plt.figure(figsize=(8, 8))
                 plt.title(f'{i + 1} epochs train')
@@ -154,21 +153,21 @@ class Pix2pix:
                     plt.subplot(4, 4, j + 1)
                     plt.imshow(fake_images[j, :, :, :])
                     plt.axis("off")
-                plt.savefig(f"{utils.IMAGES_TRAINPATH}/epoch{i + 1:0>5}.png")
+                plt.savefig(f"{path.IMAGES_TRAINPATH}/epoch{i + 1:0>5}.png")
         self.finish_training()
 
     def finish_training(self):
-        self.genModel.save(f'{utils.RESULT_H5PATH}/{self.modelname}_generator.h5')
-        self.disModel.save(f'{utils.RESULT_H5PATH}/{self.modelname}_discriminator.h5')
-        self.advModel.save(f'{utils.RESULT_H5PATH}/{self.modelname}_adversarial.h5')
+        self.genModel.save(f'{path.RESULT_H5PATH}/{self.modelname}_generator.h5')
+        self.disModel.save(f'{path.RESULT_H5PATH}/{self.modelname}_discriminator.h5')
+        self.advModel.save(f'{path.RESULT_H5PATH}/{self.modelname}_adversarial.h5')
         plt.clf()
         plt.title('loss')
         plt.plot(self.gloss, label='g')
         plt.plot(self.dloss, label='d')
-        np.save(f'{utils.RESULT_LOSSPATH}/gloss.npy', arr=self.gloss)
-        np.save(f'{utils.RESULT_LOSSPATH}/dloss.npy', arr=self.dloss)
+        np.save(f'{path.RESULT_LOSSPATH}/gloss.npy', arr=self.gloss)
+        np.save(f'{path.RESULT_LOSSPATH}/dloss.npy', arr=self.dloss)
         plt.legend(loc='best')
-        plt.savefig(f"{utils.RESULT_LOSSPATH}/loss.png")
+        plt.savefig(f"{path.RESULT_LOSSPATH}/loss.png")
 
     def predict(self, num_images=3):
         test_sketchdata, test_realdata = DataLoader().load_testing_data(metrics='[0,1]')
@@ -193,7 +192,7 @@ class Pix2pix:
             plt.title('true', fontsize=12)
             plt.imshow(test_realdata[j])
             plt.axis("off")
-        plt.savefig(f'{utils.IMAGES_PREDICTPATH}/predict.png')
+        plt.savefig(f'{path.IMAGES_PREDICTPATH}/predict.png')
         # plt.show()
 
     def showinput(self, num_images=16, idx=[], data=None):
@@ -208,12 +207,12 @@ class Pix2pix:
         plt.show()
 
 
-if __name__ == '__main__':
-    gan = Pix2pix(model_name='pix2pix')
-    s = time.time()
-    gan.train(epochs=20000) # 10000 epochs->used 25826.565 seconds7.17hour
-    e = time.time()
-    print(f'used {e-s:.3f} seconds')
-
-    gan.predict()
+# if __name__ == '__main__':
+    # gan = Pix2pix(model_name='pix2pix')
+    # s = time.time()
+    # gan.train() # 10000 epochs->used 25826.565 seconds7.17hour
+    # e = time.time()
+    # print(f'used {e-s:.3f} seconds')
+    #
+    # gan.predict()
 

@@ -1,26 +1,6 @@
-import os
 import glob
 import cv2
 import numpy as np
-
-IMAGESPATH = './images'
-IMAGES_TRAINPATH = './images/train'
-IMAGES_PREDICTPATH = './images/predict'
-RESULTPATH = './result'
-RESULT_LOSSPATH = './result/loss'
-RESULT_MODELPATH = './result/model'
-RESULT_H5PATH = './result/h5'
-
-
-def path_process():
-    if not os.path.isdir(IMAGESPATH): os.mkdir(IMAGESPATH)
-    if not os.path.isdir(IMAGES_TRAINPATH): os.mkdir(IMAGES_TRAINPATH)
-    if not os.path.isdir(IMAGES_PREDICTPATH): os.mkdir(IMAGES_PREDICTPATH)
-    if not os.path.isdir(RESULTPATH): os.mkdir(RESULTPATH)
-    if not os.path.isdir(RESULT_LOSSPATH): os.mkdir(RESULT_LOSSPATH)
-    if not os.path.isdir(RESULT_MODELPATH): os.mkdir(RESULT_MODELPATH)
-    if not os.path.isdir(RESULT_H5PATH): os.mkdir(RESULT_H5PATH)
-
 
 def standardization(func):
     def wrapper(*args,**kwargs):
@@ -37,37 +17,6 @@ def standardization(func):
         else:
             raise ValueError("The metrics parameter only provides '[0,1]' and '[-1,1]' to be entered")
     return wrapper
-
-def video(speed):
-    """
-    :param speed: 速度值代表影片放慢幾倍
-    :return:
-    """
-    path = "./images/train/*.png"
-    result_name = 'output.mp4'
-    #
-    frame_list = glob.glob(path)
-    print(frame_list)
-    print("frame count: ", len(frame_list))
-    fps = 20
-    shape = cv2.imread(frame_list[0]).shape  # delete dimension 3
-    size = (shape[1], shape[0])
-    print("frame size: ", size)
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(result_name, fourcc, fps, size)
-
-    for idx, path in enumerate(frame_list):
-        frame = cv2.imread(path)
-        current_frame = idx + 1
-        total_frame_count = len(frame_list)
-        percentage = int(current_frame * 30 / (total_frame_count + 1))
-        print("\rProcess: [{}{}] {:06d} / {:06d}".format("#" * percentage, "." * (30 - 1 - percentage), current_frame,
-                                                         total_frame_count), end='')
-        for i in range(speed):
-            out.write(frame)
-
-    out.release()
-    print("Finish making video !!!")
 
 class DataLoader:
     def __init__(self):
