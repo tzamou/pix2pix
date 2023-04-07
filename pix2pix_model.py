@@ -82,7 +82,7 @@ class Pix2pix:
 
         model = Model(inputs=input_layer, outputs=out)
         # model.summary()
-        # plot_model(model, to_file=f'{utils.RESULT_MODELPATH}/{self.modelname}_generator.png', show_shapes=True)
+        plot_model(model, to_file=f'{path.LOG_MODELPATH}/{self.modelname}_generator.png', show_shapes=True)
         # model.compile(loss=['mse', 'mae'], loss_weights=[1, 100], optimizer=Adam(0.0002, 0.5))
         return model
 
@@ -98,7 +98,7 @@ class Pix2pix:
 
         model = Model(inputs=[real_input_layer, sketch_input_layer],outputs=out)
         # model.summary()
-        # plot_model(model,to_file=f'{utils.RESULT_MODELPATH}/{self.modelname}_discriminator.png', show_shapes=True)
+        plot_model(model,to_file=f'{path.LOG_MODELPATH}/{self.modelname}_discriminator.png', show_shapes=True)
         model.compile(loss='mse', optimizer=Adam(0.0002, 0.5), metrics=['accuracy'])
         return model
 
@@ -111,7 +111,7 @@ class Pix2pix:
         model = Model(inputs=[real_input_layer, sketch_input_layer], outputs=[valid, sketch2real])
         model.compile(loss=['mse', 'mae'], loss_weights=[1, 100], optimizer=Adam(0.0002, 0.5))
         # model.summary()
-        # plot_model(model, to_file=f'{utils.RESULT_MODELPATH}/{self.modelname}_adversial.png', show_shapes=True, show_layer_names=True)
+        plot_model(model, to_file=f'{path.LOG_MODELPATH}/{self.modelname}_adversial.png', show_shapes=True, show_layer_names=True)
         # Calculate output shape of D (PatchGAN)
 
         return model
@@ -153,7 +153,7 @@ class Pix2pix:
                     plt.subplot(4, 4, j + 1)
                     plt.imshow(fake_images[j, :, :, :])
                     plt.axis("off")
-                plt.savefig(f"{path.IMAGES_TRAINPATH}/epoch{i + 1:0>5}.png")
+                plt.savefig(f"{path.RESULT_IMGPATH}/epoch{i + 1:0>5}.png")
         self.finish_training()
 
     def finish_training(self):
@@ -164,10 +164,10 @@ class Pix2pix:
         plt.title('loss')
         plt.plot(self.gloss, label='g')
         plt.plot(self.dloss, label='d')
-        np.save(f'{path.RESULT_LOSSPATH}/gloss.npy', arr=self.gloss)
-        np.save(f'{path.RESULT_LOSSPATH}/dloss.npy', arr=self.dloss)
+        np.save(f'{path.LOG_LOSSPATH}/gloss.npy', arr=self.gloss)
+        np.save(f'{path.LOG_LOSSPATH}/dloss.npy', arr=self.dloss)
         plt.legend(loc='best')
-        plt.savefig(f"{path.RESULT_LOSSPATH}/loss.png")
+        plt.savefig(f"{path.LOG_LOSSPATH}/loss.png")
 
     def predict(self, num_images=3):
         test_sketchdata, test_realdata = DataLoader().load_testing_data(metrics='[0,1]')
@@ -192,7 +192,7 @@ class Pix2pix:
             plt.title('true', fontsize=12)
             plt.imshow(test_realdata[j])
             plt.axis("off")
-        plt.savefig(f'{path.IMAGES_PREDICTPATH}/predict.png')
+        plt.savefig(f'{path.LOG_PREDICTPATH}/predict.png')
         # plt.show()
 
     def showinput(self, num_images=16, idx=[], data=None):
@@ -205,7 +205,6 @@ class Pix2pix:
             plt.imshow(img[j, :, :, :])
             plt.axis("off")
         plt.show()
-
 
 # if __name__ == '__main__':
     # gan = Pix2pix(model_name='pix2pix')
