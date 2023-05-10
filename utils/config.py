@@ -6,15 +6,17 @@ class TrainConfig:
                  batchsize:int = 32,
                  gen_lr:float = 0.0002,
                  dis_lr:float = 0.0002,
+                 lambda_:int = 100
                  ):
         self.batchsize = batchsize
         self.epochs = epochs
         self.gen_lr = gen_lr
         self.dis_lr = dis_lr
+        self.lambda_ = lambda_
 
     def save_to_json(self,path='./config.json'):
         keys = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")]
-        values = [self.batchsize,self.epochs]
+        values = [self.batchsize,self.dis_lr,self.epochs,self.gen_lr,self.lambda_]
         print(keys)
         data = dict(zip(keys, values))
         if path=='./config.json':

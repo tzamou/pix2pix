@@ -3,7 +3,7 @@ from pix2pix_model import Pix2pix
 from utils import config
 import time
 
-config = config.TrainConfig(epochs=10000,
+config = config.TrainConfig(epochs=50000,
                             batchsize=16,
                             gen_lr=0.0002,
                             dis_lr=0.0002)

@@ -45,8 +45,8 @@ class DataLoader:
             p = int(30*index/400)
             print(f"\rLoading training data: {'*'*p}{'.'*(29-p)} {100*round(index/399,3):.1f}%  ", end='')
 
-        self.realdata = self.realdata.astype(np.float64)
-        self.sketchdata = self.sketchdata.astype(np.float64)
+        self.realdata = self.realdata.astype(np.float32)
+        self.sketchdata = self.sketchdata.astype(np.float32)
         print('Loading success!\n')
         return self.sketchdata, self.realdata  #shape=(400, 256, 256, 3)
 

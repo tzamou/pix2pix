@@ -8,6 +8,8 @@ RESULT_TRAINPATH = './result/train'
 RESULT_IMGPATH = './result/train/img'
 RESULT_H5PATH = './result/h5'
 
+#if not os.path.exists('./test/test2/test3'):
+#    os.makedirs('./test/test2/test3')
 def check_folder_path(path):
     if not os.path.isdir(path):
         os.mkdir(path)
