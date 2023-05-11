@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import Adam
 from utils.data import DataLoader
 from utils import setpath as path
 from tensorflow.keras.utils import plot_model
-from tensorflow.keras.losses import BinaryCrossentropy
+from tensorflow.keras.losses import BinaryCrossentropy,MAE
 
 class Pix2pix:
     def __init__(self,model_name=None,config=None):
@@ -84,24 +84,12 @@ class Pix2pix:
         model = Model(inputs=input_layer, outputs=out)
         # model.summary()
         plot_model(model, to_file=f'{path.LOG_MODELPATH}/{self.modelname}_generator.png', show_shapes=True)
-        # model.compile(loss=['mse', 'mae'], loss_weights=[1, 100], optimizer=Adam(0.0002, 0.5))
         return model
-    def generated_loss(self,d_loss_fake, gen_output, target):
-        gen_loss = self.binary_crossentropy_loss(tf.ones_like(d_loss_fake), d_loss_fake)
-        l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
-        total_gen_loss = gen_loss + (self.lambda_ * l1_loss)
-        return total_gen_loss, gen_loss, l1_loss
-
-    def discriminator_loss(self, d_loss_real, d_loss_fake):
-        real_loss = self.binary_crossentropy_loss(tf.ones_like(d_loss_real), d_loss_real)
-        gen_loss = self.binary_crossentropy_loss(tf.zeros_like(d_loss_fake), d_loss_fake)
-        total_disc_loss = real_loss + gen_loss
-        return total_disc_loss
 
     def build_discriminator(self):
         sketch_input_layer = Input(shape=(256, 256, 3))
-        real_input_layer = Input(shape=(256, 256, 3))
-        input_layer = Concatenate(axis=-1)([real_input_layer, sketch_input_layer])
+        img_input_layer = Input(shape=(256, 256, 3))
+        input_layer = Concatenate(axis=-1)([img_input_layer, sketch_input_layer])
         x = self.encoder_block(input_layer, u=64, k=4, bn=False)
         x = self.encoder_block(x, u=128, k=4)
         x = self.encoder_block(x, u=256, k=4)
@@ -110,7 +98,7 @@ class Pix2pix:
         x = ZeroPadding2D()(x)
         out = Conv2D(1, kernel_size=4, strides=1, padding='valid', kernel_initializer='he_uniform')(x)
 
-        model = Model(inputs=[real_input_layer, sketch_input_layer],outputs=out)
+        model = Model(inputs=[img_input_layer, sketch_input_layer],outputs=out)
         # model.summary()
         plot_model(model,to_file=f'{path.LOG_MODELPATH}/{self.modelname}_discriminator.png', show_shapes=True)
         model.compile(loss='binary_crossentropy', optimizer=Adam(0.0002, 0.5), metrics=['accuracy'])
@@ -123,7 +111,7 @@ class Pix2pix:
         self.disModel.trainable = False
         valid = self.disModel([sketch2real, sketch_input_layer])
         model = Model(inputs=[real_input_layer, sketch_input_layer], outputs=[valid, sketch2real])
-        model.compile(loss=['binary_crossentropy', 'mae'], loss_weights=[1, 100], optimizer=Adam(0.0002, 0.5))
+        model.compile(loss=['binary_crossentropy','mae'], loss_weights=[1, 100], optimizer=Adam(0.0002, 0.5))
         # model.summary()
         plot_model(model, to_file=f'{path.LOG_MODELPATH}/{self.modelname}_adversial.png', show_shapes=True, show_layer_names=True)
         # Calculate output shape of D (PatchGAN)
@@ -145,14 +133,16 @@ class Pix2pix:
             y_real = np.ones((self.batchsize, ) + self.disc_patch)
             y_fake = np.zeros((self.batchsize, ) + self.disc_patch)
             # print(self.disModel([fake_images, real_images]).shape)
+
             d_loss_real = self.disModel.train_on_batch([real_images, real_sketch], y_real)
             d_loss_fake = self.disModel.train_on_batch([fake_images, real_sketch], y_fake)
             d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-
             self.dloss.append(d_loss[0])
-            g_loss = self.advModel.train_on_batch([real_images, real_sketch], [y_real, real_images])
-            # g_loss2 = self.advModel.train_on_batch([real_images, real_sketch], [y_real, real_images])
+
+
+            g_loss1 = self.advModel.train_on_batch([real_images, real_sketch], [y_real, real_images])
+            g_loss2 = self.advModel.train_on_batch([real_images, real_sketch], [y_real, real_images])
+            g_loss = 0.5 * np.add(g_loss1, g_loss2)
             # g_loss3 = self.advModel.train_on_batch([real_images, real_sketch], [y_real, real_images])
             self.gloss.append(g_loss)
             print(f"epochs:{i + 1} [D loss: {d_loss[0]}, acc.: {100 * d_loss[1]:.3f}] [G loss: {g_loss}]")
